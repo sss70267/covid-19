@@ -1,0 +1,83 @@
+import  os,sys
+stderr=sys.stderr
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+import  tensorflow as tf
+tf.compat.v1.disable_eager_execution()
+tf.get_logger().setLevel('ERROR')
+print('進行tensorflow 2.x  Windows環境的調整')
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+print('進行tensorflow 2.x  Mac環境的調整')
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+print('完成tensorflow 2.x  設定調整')
+print('tensorflow版本:',tf.__version__)
+print('python版本:',sys.version)
+
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.applications.vgg16 import decode_predictions
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.applications import imagenet_utils
+from imutils.object_detection import non_max_suppression
+from keras.utils.vis_utils import  plot_model
+import numpy as np
+import imutils
+import cv2
+import  tensorflow as tf
+
+model=VGG16(weights='imagenet',include_top=False)
+print('顯示模型結構')
+model.summary()
+img_path='./image_test/Tiger.jpg'
+print('vgg16的影像大小得調整為224X224')
+img=image.load_img(img_path,target_size=(224,224))
+x=image.img_to_array(img)
+print(x.shape)
+print('多增加一維')
+x=np.expand_dims(x,axis=0)
+print(x.shape)
+print('準備進行預測')
+x=preprocess_input(x)
+features=model.predict(x)
+print(features[0])
+print(features.shape)
+#print('Predicted:',decode_predictions(preds,top=3)[0])
+print('訓練之後')
+from  os import  listdir
+from  os.path import isfile,join
+img_path='./image_test/'
+image_files=np.array([f for f in listdir(img_path) if isfile(join(img_path,f)) and f[-3:]=='jpg'])
+print(image_files)
+X=np.array([])
+print('一開始的X維度長度:',len(X.shape))
+for f in image_files:
+    image_file=join(img_path,f)
+    img=image.load_img(image_file,target_size=(224,224))
+    img2=image.img_to_array(img)
+    img2=np.expand_dims(img2,axis=0)
+    if len(X.shape)==1:
+        X=img2
+        print('X維度-if:', X.shape)
+    else:
+        X=np.concatenate((X,img2),axis=0)
+        print('X維度-else:',X.shape)
+X=preprocess_input(X) #VGG16的輸入
+features=model.predict(X) #預測
+print('預測的形狀,X的形狀')
+print(features.shape,X.shape)
+print('相似度的比較')
+from sklearn.metrics.pairwise import cosine_similarity
+no=-2 # -2 比對倒數第二張圖 Tiger.jpg
+print(image_files[no])
+features2=features.reshape((features.shape[0],-1))
+other_features=np.concatenate((features2[:no],features2[no+1:])) #矩陣的串接，會愈接愈長
+#特徵的相似度比較
+simliar_list=cosine_similarity(features2[no:no+1],other_features,dense_output=False)
+print(np.sort(simliar_list[0])[::-1])
+image_files2=np.delete(image_files,no)
+print(image_files2)
+image_files2[np.argsort(simliar_list[0])[::-1]]
+print(image_files2)
+
+
+
